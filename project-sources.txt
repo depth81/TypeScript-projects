@@ -1,4 +1,4 @@
-1) REACT QUIZ:
+1)REACT QUIZ:
 https://www.youtube.com/watch?v=F2JCjVSZlG0&t=227s
 
 2)REACT-SHOPPING-CART:
@@ -9,3 +9,6 @@ https://www.youtube.com/watch?v=sfmL6bGbiN8&t=3s
 
 4)TODO List:
 https://www.youtube.com/watch?v=bjnW2NLAofI&t=8s
+
+5)ARKANOID GAME:
+https://www.youtube.com/watch?v=7bejSTim38A
