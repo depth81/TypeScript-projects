@@ -16,7 +16,13 @@ async function run() {
     }
     const context = canvasEl.getContext("2d");
     const img = await loadImageFromUrl("http://localhost:4000/static/bg.png");
-    context.drawImage(img, 100, 100, 128, 128);
+    drawMap(context, img, canvasEl.width, canvasEl.height);
+}
+function drawMap(context, tileImage, width, height) {
+    const tileSize = 64;
+    const tileCountX = Math.ceil(width / tileSize);
+    const tileCountY = Math.ceil(height / tileSize);
+    for(let y = 0; y < tileCountY; y++)for(let x = 0; x < tileCountX; x++)context.drawImage(tileImage, x * tileSize, y * tileSize, tileSize, tileSize);
 }
 run();
 

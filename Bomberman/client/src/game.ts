@@ -1,24 +1,44 @@
-function loadImageFromUrl(url: string): Promise<HTMLImageElement>{
-    return new Promise(resolve => {
-        const img = new Image()
-            img.src = url
-            img.onload = () => {
-            resolve(img)
-        }
-        img.src = url
-    })
-}
+import imageUtils from "./imageUtils"
+import GameMap from "./GameMap"
+import GameLoop from "./GameLoop"
 
-async function run(){
-    const canvasEl = document.getElementById("game-canvas") as HTMLCanvasElement | undefined
-    if (canvasEl == null){
-        console.log("Couldn't find the canvas elment")
-        return
+class Game{
+
+    private context: CanvasRenderingContext2D
+    private width: number
+    private height: number
+
+    private map: GameMap
+    private charImage: HTMLImageElement
+    private charX = 0
+    private charY = 0
+
+    constructor(context:CanvasRenderingContext2D, width:number, height:number){
+        this.context = context
+        this.width = width
+        this.height = height
     }
-    const context = canvasEl.getContext("2d")
-    const img =  await loadImageFromUrl("http://localhost:4000/static/bg.png")
 
-    context.drawImage(img,100,100,128,128)
+    public async run(){
+        const img =  await imageUtils.loadImageFromUrl("http://localhost:4000/static/bg.png")
+        
+        this.map = new GameMap(img, this.width, this.height)
+
+        this.charImage = await imageUtils.loadImageFromUrl("http://localhost:4000/static/player_f00.png")
+
+        const gameLoop = new GameLoop(this.loop.bind(this))
+        gameLoop.run()
+        
+    }
+
+    private loop(delta:number){
+        
+        this.map.render(this.context)
+
+        this.charX += 30 * delta
+        this.charY += 30 * delta
+        this.context.drawImage(this.charImage,this.charX,this.charY)
+    }
 }
 
-run()
+export default Game
