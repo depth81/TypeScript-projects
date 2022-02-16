@@ -1,4 +1,4 @@
-class imageUtils{
+class ImageUtils{
     public static loadImageFromUrl(url: string): Promise<HTMLImageElement>{
         return new Promise(resolve => {
             const img = new Image()
@@ -11,4 +11,4 @@ class imageUtils{
     }
 }
 
-export default imageUtils
+export default ImageUtils

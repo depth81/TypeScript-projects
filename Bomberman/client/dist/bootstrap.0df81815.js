@@ -117,19 +117,19 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/imageUtils.ts":[function(require,module,exports) {
+})({"src/ImageUtils.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var imageUtils =
+var ImageUtils =
 /** @class */
 function () {
-  function imageUtils() {}
+  function ImageUtils() {}
 
-  imageUtils.loadImageFromUrl = function (url) {
+  ImageUtils.loadImageFromUrl = function (url) {
     return new Promise(function (resolve) {
       var img = new Image();
       img.src = url;
@@ -142,10 +142,10 @@ function () {
     });
   };
 
-  return imageUtils;
+  return ImageUtils;
 }();
 
-exports.default = imageUtils;
+exports.default = ImageUtils;
 },{}],"src/GameMap.ts":[function(require,module,exports) {
 "use strict";
 
@@ -162,7 +162,8 @@ function () {
     this.height = height;
   }
 
-  GameMap.prototype.render = function (context) {
+  GameMap.prototype.render = function (_a) {
+    var context = _a.context;
     var tileSize = 64;
     var tileCountX = Math.ceil(this.width / tileSize);
     var tileCountY = Math.ceil(this.height / tileSize);
@@ -248,7 +249,47 @@ function () {
 }();
 
 exports.default = GameLoop;
-},{"./DeltaTracker":"src/DeltaTracker.ts"}],"src/Game.ts":[function(require,module,exports) {
+},{"./DeltaTracker":"src/DeltaTracker.ts"}],"src/Sprite.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Sprite =
+/** @class */
+function () {
+  function Sprite(image, _a) {
+    var _b = _a === void 0 ? {} : _a,
+        _c = _b.flippedX,
+        flippedX = _c === void 0 ? false : _c;
+
+    this.image = image;
+    this.flippedX = flippedX;
+  }
+
+  Sprite.prototype.render = function (_a, x, y, width, height) {
+    var context = _a.context;
+    var renderedX = x;
+
+    if (this.flippedX) {
+      context.save();
+      context.scale(-1, 1);
+      renderedX = -(x + width);
+    }
+
+    context.drawImage(this.image, renderedX, y, width, height);
+
+    if (this.flippedX) {
+      context.restore();
+    }
+  };
+
+  return Sprite;
+}();
+
+exports.default = Sprite;
+},{}],"src/Player.ts":[function(require,module,exports) {
 "use strict";
 
 var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
@@ -404,44 +445,339 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var imageUtils_1 = __importDefault(require("./imageUtils"));
+var ImageUtils_1 = __importDefault(require("./ImageUtils"));
+
+var Sprite_1 = __importDefault(require("./Sprite"));
+
+var Player =
+/** @class */
+function () {
+  function Player() {
+    this.sprites = {};
+    this.xPos = 0;
+    this.yPos = 0;
+    this.speed = 150;
+    this.velX = 0;
+    this.velY = 0;
+  }
+
+  Player.prototype.setup = function () {
+    return __awaiter(this, void 0, void 0, function () {
+      var imagePromises, _a, _b, imageF, imageB, imageR;
+
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_f00.png")];
+
+          case 1:
+            _a = [_c.sent()];
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_b00.png")];
+
+          case 2:
+            _a = _a.concat([_c.sent()]);
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_r00.png")];
+
+          case 3:
+            imagePromises = _a.concat([_c.sent()]);
+            return [4
+            /*yield*/
+            , Promise.all(imagePromises)];
+
+          case 4:
+            _b = _c.sent(), imageF = _b[0], imageB = _b[1], imageR = _b[2];
+            this.sprites = {
+              forward: new Sprite_1.default(imageF),
+              backward: new Sprite_1.default(imageB),
+              right: new Sprite_1.default(imageR),
+              left: new Sprite_1.default(imageR, {
+                flippedX: true
+              })
+            };
+            this.width = 64;
+            this.height = 128;
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  };
+
+  Player.prototype.render = function (gameData, delta) {
+    var keyListener = gameData.keyListener;
+    this.velX = 0;
+    this.velY = 0;
+
+    if (keyListener.isAnyKeyDown(["d", "ArrowRight"])) {
+      this.velX = this.speed * delta;
+    } else if (keyListener.isAnyKeyDown(["q", "a", "ArrowLeft"])) {
+      this.velX = -(this.speed * delta);
+    }
+
+    if (keyListener.isAnyKeyDown(["s", "ArrowDown"])) {
+      this.velY = this.speed * delta;
+    } else if (keyListener.isAnyKeyDown(["z", "w", "ArrowUp"])) {
+      this.velY = -(this.speed * delta);
+    }
+
+    this.xPos += this.velX;
+    this.yPos += this.velY;
+    this.getMovingSprite().render(gameData, this.xPos, this.yPos, this.width, this.height);
+  };
+
+  Player.prototype.getMovingSprite = function () {
+    if (this.velX > 0) return this.sprites["right"];
+    if (this.velX < 0) return this.sprites["left"];
+    if (this.velY < 0) return this.sprites["backward"];
+    return this.sprites["forward"];
+  };
+
+  return Player;
+}();
+
+exports.default = Player;
+},{"./ImageUtils":"src/ImageUtils.ts","./Sprite":"src/Sprite.ts"}],"src/KeyListener.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var KeyListener =
+/** @class */
+function () {
+  function KeyListener() {
+    this.keyStates = {};
+  }
+
+  KeyListener.prototype.setup = function () {
+    var _this = this;
+
+    document.addEventListener("keydown", function (e) {
+      e.preventDefault();
+      _this.keyStates[e.key] = true;
+    });
+    document.addEventListener("keyup", function (e) {
+      e.preventDefault();
+      _this.keyStates[e.key] = false;
+    });
+  };
+
+  KeyListener.prototype.isKeyDown = function (key) {
+    return this.keyStates[key] === true;
+  };
+
+  KeyListener.prototype.isAnyKeyDown = function (keys) {
+    var _this = this;
+
+    return keys.some(function (key) {
+      return _this.isKeyDown(key);
+    });
+  };
+
+  return KeyListener;
+}();
+
+exports.default = KeyListener;
+},{}],"src/Game.ts":[function(require,module,exports) {
+"use strict";
+
+var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = this && this.__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var ImageUtils_1 = __importDefault(require("./ImageUtils"));
 
 var GameMap_1 = __importDefault(require("./GameMap"));
 
 var GameLoop_1 = __importDefault(require("./GameLoop"));
 
+var Player_1 = __importDefault(require("./Player"));
+
+var KeyListener_1 = __importDefault(require("./KeyListener"));
+
 var Game =
 /** @class */
 function () {
-  function Game(context, width, height) {
-    this.charX = 0;
-    this.charY = 0;
-    this.context = context;
-    this.width = width;
-    this.height = height;
+  function Game(canvasEl) {
+    this.canvasEl = canvasEl;
+    this.gameData = {
+      context: canvasEl.getContext("2d"),
+      screenWidth: canvasEl.width,
+      screenHeight: canvasEl.height,
+      keyListener: new KeyListener_1.default()
+    };
   }
 
   Game.prototype.run = function () {
     return __awaiter(this, void 0, void 0, function () {
-      var img, _a, gameLoop;
-
-      return __generator(this, function (_b) {
-        switch (_b.label) {
+      var gameLoop;
+      return __generator(this, function (_a) {
+        switch (_a.label) {
           case 0:
             return [4
             /*yield*/
-            , imageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/bg.png")];
+            , this.setup()];
 
           case 1:
-            img = _b.sent();
-            this.map = new GameMap_1.default(img, this.width, this.height);
-            _a = this;
-            return [4
-            /*yield*/
-            , imageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_f00.png")];
+            _a.sent();
 
-          case 2:
-            _a.charImage = _b.sent();
             gameLoop = new GameLoop_1.default(this.loop.bind(this));
             gameLoop.run();
             return [2
@@ -452,18 +788,46 @@ function () {
     });
   };
 
+  Game.prototype.setup = function () {
+    return __awaiter(this, void 0, void 0, function () {
+      var img;
+      return __generator(this, function (_a) {
+        switch (_a.label) {
+          case 0:
+            this.gameData.keyListener.setup();
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/bg.png")];
+
+          case 1:
+            img = _a.sent();
+            this.map = new GameMap_1.default(img, this.gameData.screenWidth, this.gameData.screenHeight);
+            this.player = new Player_1.default();
+            return [4
+            /*yield*/
+            , this.player.setup()];
+
+          case 2:
+            _a.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  };
+
   Game.prototype.loop = function (delta) {
-    this.map.render(this.context);
-    this.charX += 30 * delta;
-    this.charY += 30 * delta;
-    this.context.drawImage(this.charImage, this.charX, this.charY);
+    this.map.render(this.gameData);
+    this.player.render(this.gameData, delta);
   };
 
   return Game;
 }();
 
 exports.default = Game;
-},{"./imageUtils":"src/imageUtils.ts","./GameMap":"src/GameMap.ts","./GameLoop":"src/GameLoop.ts"}],"src/bootstrap.ts":[function(require,module,exports) {
+},{"./ImageUtils":"src/ImageUtils.ts","./GameMap":"src/GameMap.ts","./GameLoop":"src/GameLoop.ts","./Player":"src/Player.ts","./KeyListener":"src/KeyListener.ts"}],"src/bootstrap.ts":[function(require,module,exports) {
 "use strict";
 
 var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
@@ -635,7 +999,7 @@ function bootstrap() {
       }
 
       context = canvasEl.getContext("2d");
-      game = new Game_1.default(context, canvasEl.width, canvasEl.height);
+      game = new Game_1.default(canvasEl);
       game.run();
       return [2
       /*return*/
@@ -673,7 +1037,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63955" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "53825" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
