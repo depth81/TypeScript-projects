@@ -249,46 +249,152 @@ function () {
 }();
 
 exports.default = GameLoop;
-},{"./DeltaTracker":"src/DeltaTracker.ts"}],"src/Sprite.ts":[function(require,module,exports) {
+},{"./DeltaTracker":"src/DeltaTracker.ts"}],"src/SpriteSheet.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Sprite =
+var SpriteSheet =
 /** @class */
 function () {
-  function Sprite(image, _a) {
-    var _b = _a === void 0 ? {} : _a,
-        _c = _b.flippedX,
-        flippedX = _c === void 0 ? false : _c;
-
+  function SpriteSheet(image, spriteWidth, spriteHeight) {
     this.image = image;
-    this.flippedX = flippedX;
+    this.spriteWidth = spriteWidth;
+    this.spriteHeight = spriteHeight;
   }
 
-  Sprite.prototype.render = function (_a, x, y, width, height) {
+  SpriteSheet.prototype.render = function (_a, xCount, yCount, x, y, width, height, _b) {
     var context = _a.context;
+
+    var _c = _b === void 0 ? {} : _b,
+        _d = _c.flippedX,
+        flippedX = _d === void 0 ? false : _d;
+
     var renderedX = x;
 
-    if (this.flippedX) {
+    if (flippedX) {
       context.save();
       context.scale(-1, 1);
       renderedX = -(x + width);
     }
 
-    context.drawImage(this.image, renderedX, y, width, height);
+    context.drawImage(this.image, xCount * this.spriteWidth, yCount * this.spriteHeight, this.spriteWidth, this.spriteHeight, renderedX, y, width, height);
 
-    if (this.flippedX) {
+    if (flippedX) {
       context.restore();
     }
   };
 
-  return Sprite;
+  return SpriteSheet;
 }();
 
-exports.default = Sprite;
+exports.default = SpriteSheet;
+},{}],"src/SpriteSheetSprite.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var SpriteSheetSprite =
+/** @class */
+function () {
+  function SpriteSheetSprite(spriteSheet, xCount, yCount, _a) {
+    var _b = _a === void 0 ? {} : _a,
+        _c = _b.flippedX,
+        flippedX = _c === void 0 ? false : _c;
+
+    this.spriteSheet = spriteSheet;
+    this.xCount = xCount;
+    this.yCount = yCount;
+    this.flippedX = flippedX;
+  }
+
+  SpriteSheetSprite.prototype.render = function (gameData, delta, x, y, width, height) {
+    this.spriteSheet.render(gameData, this.xCount, this.yCount, x, y, width, height, {
+      flippedX: this.flippedX
+    });
+  };
+
+  return SpriteSheetSprite;
+}();
+
+exports.default = SpriteSheetSprite;
+},{}],"src/Animation.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Animation =
+/** @class */
+function () {
+  function Animation(spriteSheet, frames, msPerFrame, _a) {
+    var _b = _a === void 0 ? {} : _a,
+        _c = _b.flippedX,
+        flippedX = _c === void 0 ? false : _c;
+
+    this.currentFrameIndex = 0;
+    this.msInCurrentFrame = 0;
+    this.spriteSheet = spriteSheet;
+    this.frames = frames;
+    this.msPerFrame = msPerFrame;
+    this.flippedX = flippedX;
+  }
+
+  Animation.prototype.render = function (gameData, delta, x, y, width, heigth, _a) {
+    var _b = _a === void 0 ? {} : _a,
+        _c = _b.flippedX,
+        flippedX = _c === void 0 ? false : _c; //Update the frame
+
+
+    this.msInCurrentFrame += delta * 1000;
+
+    if (this.msInCurrentFrame >= this.msPerFrame) {
+      this.msInCurrentFrame -= this.msPerFrame;
+      this.currentFrameIndex++;
+
+      if (this.currentFrameIndex >= this.frames.length) {
+        this.currentFrameIndex = 0;
+      }
+    } //Render the frame
+
+
+    var currentFrame = this.frames[this.currentFrameIndex];
+    this.spriteSheet.render(gameData, currentFrame[0], currentFrame[1], x, y, width, heigth, {
+      flippedX: this.flippedX
+    });
+  };
+
+  return Animation;
+}();
+
+exports.default = Animation;
+},{}],"src/Range.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Range =
+/** @class */
+function () {
+  function Range() {}
+
+  Range.rowRange = function (rowNumber, colCount) {
+    return Array.from(new Array(colCount), function (x, i) {
+      return [i, rowNumber];
+    });
+  };
+
+  return Range;
+}();
+
+exports.default = Range;
 },{}],"src/Player.ts":[function(require,module,exports) {
 "use strict";
 
@@ -447,7 +553,13 @@ Object.defineProperty(exports, "__esModule", {
 
 var ImageUtils_1 = __importDefault(require("./ImageUtils"));
 
-var Sprite_1 = __importDefault(require("./Sprite"));
+var SpriteSheet_1 = __importDefault(require("./SpriteSheet"));
+
+var SpriteSheetSprite_1 = __importDefault(require("./SpriteSheetSprite"));
+
+var Animation_1 = __importDefault(require("./Animation"));
+
+var Range_1 = __importDefault(require("./Range"));
 
 var Player =
 /** @class */
@@ -463,40 +575,48 @@ function () {
 
   Player.prototype.setup = function () {
     return __awaiter(this, void 0, void 0, function () {
-      var imagePromises, _a, _b, imageF, imageB, imageR;
+      var spriteSheetImage, spriteSheet, imagePromises, _a, _b, imageF, imageB, imageR;
 
       return __generator(this, function (_c) {
         switch (_c.label) {
           case 0:
             return [4
             /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_f00.png")];
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_spritesheet.png")];
 
           case 1:
+            spriteSheetImage = _c.sent();
+            spriteSheet = new SpriteSheet_1.default(spriteSheetImage, 64, 128);
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_f00.png")];
+
+          case 2:
             _a = [_c.sent()];
             return [4
             /*yield*/
             , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_b00.png")];
 
-          case 2:
+          case 3:
             _a = _a.concat([_c.sent()]);
             return [4
             /*yield*/
             , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_r00.png")];
 
-          case 3:
+          case 4:
             imagePromises = _a.concat([_c.sent()]);
             return [4
             /*yield*/
             , Promise.all(imagePromises)];
 
-          case 4:
+          case 5:
             _b = _c.sent(), imageF = _b[0], imageB = _b[1], imageR = _b[2];
             this.sprites = {
-              forward: new Sprite_1.default(imageF),
-              backward: new Sprite_1.default(imageB),
-              right: new Sprite_1.default(imageR),
-              left: new Sprite_1.default(imageR, {
+              idle: new SpriteSheetSprite_1.default(spriteSheet, 0, 0),
+              forward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(0, 8), 100),
+              backward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(1, 8), 100),
+              right: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100),
+              left: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100, {
                 flippedX: true
               })
             };
@@ -529,10 +649,11 @@ function () {
 
     this.xPos += this.velX;
     this.yPos += this.velY;
-    this.getMovingSprite().render(gameData, this.xPos, this.yPos, this.width, this.height);
+    this.getMovingSprite().render(gameData, delta, this.xPos, this.yPos, this.width, this.height);
   };
 
   Player.prototype.getMovingSprite = function () {
+    if (this.velX === 0 && this.velY === 0) return this.sprites["idle"];
     if (this.velX > 0) return this.sprites["right"];
     if (this.velX < 0) return this.sprites["left"];
     if (this.velY < 0) return this.sprites["backward"];
@@ -543,7 +664,7 @@ function () {
 }();
 
 exports.default = Player;
-},{"./ImageUtils":"src/ImageUtils.ts","./Sprite":"src/Sprite.ts"}],"src/KeyListener.ts":[function(require,module,exports) {
+},{"./ImageUtils":"src/ImageUtils.ts","./SpriteSheet":"src/SpriteSheet.ts","./SpriteSheetSprite":"src/SpriteSheetSprite.ts","./Animation":"src/Animation.ts","./Range":"src/Range.ts"}],"src/KeyListener.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -557,14 +678,14 @@ function () {
     this.keyStates = {};
   }
 
-  KeyListener.prototype.setup = function () {
+  KeyListener.prototype.setup = function (canvasEl) {
     var _this = this;
 
-    document.addEventListener("keydown", function (e) {
+    canvasEl.addEventListener("keydown", function (e) {
       e.preventDefault();
       _this.keyStates[e.key] = true;
     });
-    document.addEventListener("keyup", function (e) {
+    canvasEl.addEventListener("keyup", function (e) {
       e.preventDefault();
       _this.keyStates[e.key] = false;
     });
@@ -794,7 +915,7 @@ function () {
       return __generator(this, function (_a) {
         switch (_a.label) {
           case 0:
-            this.gameData.keyListener.setup();
+            this.gameData.keyListener.setup(this.canvasEl);
             return [4
             /*yield*/
             , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/bg.png")];
@@ -999,6 +1120,7 @@ function bootstrap() {
       }
 
       context = canvasEl.getContext("2d");
+      canvasEl.focus();
       game = new Game_1.default(canvasEl);
       game.run();
       return [2
@@ -1037,7 +1159,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "53825" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62319" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

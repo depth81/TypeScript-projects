@@ -9,6 +9,8 @@ async function bootstrap(){
     
     const context = canvasEl.getContext("2d")
 
+    canvasEl.focus()
+
     const game = new Game(canvasEl)
     game.run()
 

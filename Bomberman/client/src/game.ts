@@ -34,7 +34,7 @@ class Game{
 
     private async setup(){
 
-        this.gameData.keyListener.setup()
+        this.gameData.keyListener.setup(this.canvasEl)
 
         const img =  await imageUtils.loadImageFromUrl("http://localhost:4000/static/bg.png")
         
