@@ -1,19 +1,16 @@
-import BombermanGame from './BombermanGame'
+import BomermanGame from "./BombermanGame"
 
-async function bootstrap(){
-    const canvasEl = document.getElementById("game-canvas") as HTMLCanvasElement | undefined
-    if (canvasEl == null){
-        console.log("Couldn't find the canvas elment")
-        return
-    }
-    
-    const context = canvasEl.getContext("2d")
+async function bootstrap() {
+  const canvasEl = document.getElementById("game-canvas") as HTMLCanvasElement | undefined
+  if (canvasEl == null) {
+    console.log("Couldn't find the canvas element")
+    return
+  }
 
-    canvasEl.focus()
+  canvasEl.focus()
 
-    const game = new BombermanGame(canvasEl)
-    game.run()
-
+  const game = new BomermanGame(canvasEl)
+  game.run()
 }
 
 bootstrap()

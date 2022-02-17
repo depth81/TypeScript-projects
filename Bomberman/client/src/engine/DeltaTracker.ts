@@ -1,27 +1,25 @@
-class Deltatracker{
 
-    private lastTime: number | undefined
+class DeltaTracker {
+
+  private lastTime: number | undefined
+
+  public getAndUpdateDelta() {
+    if (this.lastTime == null) {
+      this.lastTime = this.getTimestampMS()
+      return 0
+    }
     
-    public getAndUpdateDelta(){
+    const currentTime = this.getTimestampMS()
+    // delta => time since last frame in seconds
+    const delta = (currentTime - this.lastTime) / 1000
+    this.lastTime = currentTime
+    return delta
+  }
 
-        if(this.lastTime == null){
-            this.lastTime = this.getTimestampMS()
-            return 0
-        }
-
-        const currentTime = this.getTimestampMS()
-        //Delta is the time since last frame seconds
-        const delta = (currentTime - this.lastTime) / 1000
-        this.lastTime = currentTime
-
-        return delta
-
-    }
-
-    private getTimestampMS(){
-        return (new Date()).getTime()
-    }
-
+  private getTimestampMS() {
+    return (new Date()).getTime()
+  }
+  
 }
 
-export default Deltatracker
+export default DeltaTracker

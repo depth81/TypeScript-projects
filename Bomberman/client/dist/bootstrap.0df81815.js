@@ -124,32 +124,32 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Deltatracker =
+var DeltaTracker =
 /** @class */
 function () {
-  function Deltatracker() {}
+  function DeltaTracker() {}
 
-  Deltatracker.prototype.getAndUpdateDelta = function () {
+  DeltaTracker.prototype.getAndUpdateDelta = function () {
     if (this.lastTime == null) {
       this.lastTime = this.getTimestampMS();
       return 0;
     }
 
-    var currentTime = this.getTimestampMS(); //Delta is the time since last frame seconds
+    var currentTime = this.getTimestampMS(); // delta => time since last frame in seconds
 
     var delta = (currentTime - this.lastTime) / 1000;
     this.lastTime = currentTime;
     return delta;
   };
 
-  Deltatracker.prototype.getTimestampMS = function () {
+  DeltaTracker.prototype.getTimestampMS = function () {
     return new Date().getTime();
   };
 
-  return Deltatracker;
+  return DeltaTracker;
 }();
 
-exports.default = Deltatracker;
+exports.default = DeltaTracker;
 },{}],"src/engine/GameLoop.ts":[function(require,module,exports) {
 "use strict";
 
@@ -169,8 +169,8 @@ var GameLoop =
 /** @class */
 function () {
   function GameLoop(updateFunction, renderFunction) {
-    this.renderFunction = renderFunction;
     this.updateFunction = updateFunction;
+    this.renderFunction = renderFunction;
     this.deltaTracker = new DeltaTracker_1.default();
   }
 
@@ -232,7 +232,357 @@ function () {
 }();
 
 exports.default = KeyListener;
-},{}],"src/engine/Game.ts":[function(require,module,exports) {
+},{}],"src/engine/collision/CollisionHandler.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var CollisionHandler =
+/** @class */
+function () {
+  function CollisionHandler() {
+    this.collidables = [];
+  }
+
+  CollisionHandler.prototype.addCollidable = function (collidable) {
+    this.collidables.push(collidable);
+  };
+
+  CollisionHandler.prototype.testMovement = function (driverBox, xMovement, yMovement) {
+    return this.findCollisions({
+      xPos: driverBox.xPos + xMovement,
+      yPos: driverBox.yPos + yMovement,
+      width: driverBox.width,
+      height: driverBox.height
+    });
+  };
+
+  CollisionHandler.prototype.findCollisions = function (driverBox) {
+    var collisions = [];
+
+    for (var _i = 0, _a = this.collidables; _i < _a.length; _i++) {
+      var collidable = _a[_i];
+      var collision = this.findCollision(driverBox, collidable);
+
+      if (collision != null) {
+        collisions.push(collision);
+      }
+    }
+
+    return collisions;
+  };
+
+  CollisionHandler.prototype.findCollision = function (driverBox, brick) {
+    var brickBox = brick.getCollisionBox();
+    var rightCollision = driverBox.xPos < brickBox.xPos && driverBox.xPos + driverBox.width > brickBox.xPos;
+    var leftCollision = brickBox.xPos < driverBox.xPos && brickBox.xPos + brickBox.width > driverBox.xPos;
+    var topCollision = driverBox.yPos < brickBox.yPos && driverBox.yPos + driverBox.height > brickBox.yPos;
+    var bottomCollision = brickBox.yPos < driverBox.yPos && brickBox.yPos + brickBox.height > driverBox.yPos;
+
+    if ((rightCollision || leftCollision) && (topCollision || bottomCollision)) {
+      return {
+        with: brick,
+        top: topCollision,
+        bottom: bottomCollision,
+        left: leftCollision,
+        right: rightCollision
+      };
+    }
+
+    return null;
+  };
+
+  return CollisionHandler;
+}();
+
+exports.default = CollisionHandler;
+},{}],"src/engine/EntityManager.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.EntityManager = void 0;
+
+var EntityManager =
+/** @class */
+function () {
+  function EntityManager(imageCache) {
+    this.entities = [];
+    this.imageCache = imageCache;
+  }
+
+  EntityManager.prototype.addEntity = function (entity) {
+    if (!entity.hasBeenSetup) {
+      entity.runSetup(this.imageCache);
+    }
+
+    this.entities.push(entity);
+  };
+
+  EntityManager.prototype.getEntities = function () {
+    return this.entities;
+  };
+
+  return EntityManager;
+}();
+
+exports.EntityManager = EntityManager;
+},{}],"src/engine/ImageUtils.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var ImageUtils =
+/** @class */
+function () {
+  function ImageUtils() {}
+
+  ImageUtils.loadImageFromUrl = function (url) {
+    return new Promise(function (resolve) {
+      var img = new Image();
+
+      img.onload = function () {
+        resolve(img);
+      };
+
+      img.src = url;
+    });
+  };
+
+  return ImageUtils;
+}();
+
+exports.default = ImageUtils;
+},{}],"src/engine/ImageCache.ts":[function(require,module,exports) {
+"use strict";
+
+var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = this && this.__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ImageCache = void 0;
+
+var ImageUtils_1 = __importDefault(require("./ImageUtils"));
+
+var ImageCache =
+/** @class */
+function () {
+  function ImageCache() {
+    this.preloads = {};
+  }
+
+  ImageCache.prototype.preloadImage = function (name, url) {
+    return __awaiter(this, void 0, void 0, function () {
+      var img;
+      return __generator(this, function (_a) {
+        switch (_a.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , ImageUtils_1.default.loadImageFromUrl(url)];
+
+          case 1:
+            img = _a.sent();
+            this.preloads[name] = img;
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  };
+
+  ImageCache.prototype.preloadImages = function (urls) {
+    return __awaiter(this, void 0, void 0, function () {
+      var promises;
+
+      var _this = this;
+
+      return __generator(this, function (_a) {
+        switch (_a.label) {
+          case 0:
+            promises = Object.entries(urls).map(function (_a) {
+              var name = _a[0],
+                  url = _a[1];
+              return _this.preloadImage(name, url);
+            });
+            return [4
+            /*yield*/
+            , Promise.all(promises)];
+
+          case 1:
+            _a.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  };
+
+  ImageCache.prototype.getPreloaded = function (name) {
+    return this.preloads[name];
+  };
+
+  return ImageCache;
+}();
+
+exports.ImageCache = ImageCache;
+},{"./ImageUtils":"src/engine/ImageUtils.ts"}],"src/engine/Game.ts":[function(require,module,exports) {
 "use strict";
 
 var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
@@ -392,17 +742,26 @@ var GameLoop_1 = __importDefault(require("./GameLoop"));
 
 var KeyListener_1 = __importDefault(require("./KeyListener"));
 
+var CollisionHandler_1 = __importDefault(require("./collision/CollisionHandler"));
+
+var EntityManager_1 = require("./EntityManager");
+
+var ImageCache_1 = require("./ImageCache");
+
 var Game =
 /** @class */
 function () {
   function Game(canvasEl) {
-    this.entities = [];
     this.canvasEl = canvasEl;
+    var imageCache = new ImageCache_1.ImageCache();
     this.gameData = {
       context: canvasEl.getContext("2d"),
       screenWidth: canvasEl.width,
       screenHeight: canvasEl.height,
-      keyListener: new KeyListener_1.default()
+      keyListener: new KeyListener_1.default(),
+      collisionHandler: new CollisionHandler_1.default(),
+      entityManager: new EntityManager_1.EntityManager(imageCache),
+      imageCache: imageCache
     };
   }
 
@@ -415,18 +774,12 @@ function () {
             this.gameData.keyListener.setup(this.canvasEl);
             return [4
             /*yield*/
-            , this.setup(this.gameData)];
+            , this.preload(this.gameData.imageCache)];
 
           case 1:
             _a.sent();
 
-            return [4
-            /*yield*/
-            , this.setupEntities()];
-
-          case 2:
-            _a.sent();
-
+            this.setup(this.gameData);
             gameLoop = new GameLoop_1.default(this.update.bind(this), this.render.bind(this));
             gameLoop.run();
             return [2
@@ -438,30 +791,20 @@ function () {
   };
 
   Game.prototype.addEntity = function (entity) {
-    this.entities.push(entity);
-  };
+    this.gameData.entityManager.addEntity(entity); // TODO: add this again
+    // if (this.isCollidable(entity)) {
+    //   this.gameData.collisionHandler.addCollidable(entity);
+    // }
+  }; // private async setupEntities() {
+  //   let promises = this.gameData.entityManager.getEntities().map(e => e.setup(this.gameData))
+  //   return Promise.all(promises)
+  // }
 
-  Game.prototype.setupEntities = function () {
-    return __awaiter(this, void 0, void 0, function () {
-      var promises;
-
-      var _this = this;
-
-      return __generator(this, function (_a) {
-        promises = this.entities.map(function (e) {
-          return e.setup(_this.gameData);
-        });
-        return [2
-        /*return*/
-        , Promise.all(promises)];
-      });
-    });
-  };
 
   Game.prototype.update = function (delta) {
     var _this = this;
 
-    this.entities.forEach(function (e) {
+    this.gameData.entityManager.getEntities().forEach(function (e) {
       return e.update(_this.gameData, delta);
     });
   };
@@ -469,16 +812,20 @@ function () {
   Game.prototype.render = function () {
     var _this = this;
 
-    this.entities.forEach(function (e) {
+    this.gameData.entityManager.getEntities().forEach(function (e) {
       return e.render(_this.gameData);
     });
+  };
+
+  Game.prototype.isCollidable = function (entity) {
+    return entity.getCollisionBox !== undefined;
   };
 
   return Game;
 }();
 
 exports.default = Game;
-},{"./GameLoop":"src/engine/GameLoop.ts","./KeyListener":"src/engine/KeyListener.ts"}],"src/engine/Entity.ts":[function(require,module,exports) {
+},{"./GameLoop":"src/engine/GameLoop.ts","./KeyListener":"src/engine/KeyListener.ts","./collision/CollisionHandler":"src/engine/collision/CollisionHandler.ts","./EntityManager":"src/engine/EntityManager.ts","./ImageCache":"src/engine/ImageCache.ts"}],"src/engine/Entity.ts":[function(require,module,exports) {
 "use strict";
 
 var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
@@ -631,17 +978,32 @@ Object.defineProperty(exports, "__esModule", {
 var Entity =
 /** @class */
 function () {
-  function Entity() {}
+  function Entity() {
+    this.hasBeenSetup = false;
+  }
 
-  Entity.prototype.setup = function (gameData) {
+  Entity.prototype.runSetup = function (imageCache) {
     return __awaiter(this, void 0, Promise, function () {
       return __generator(this, function (_a) {
-        return [2
-        /*return*/
-        ];
+        switch (_a.label) {
+          case 0:
+            this.hasBeenSetup = true;
+            return [4
+            /*yield*/
+            , this.setup(imageCache)];
+
+          case 1:
+            _a.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
       });
     });
   };
+
+  Entity.prototype.setup = function (imageCache) {};
 
   Entity.prototype.update = function (gameData, delta) {};
 
@@ -649,35 +1011,6 @@ function () {
 }();
 
 exports.default = Entity;
-},{}],"src/engine/ImageUtils.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var ImageUtils =
-/** @class */
-function () {
-  function ImageUtils() {}
-
-  ImageUtils.loadImageFromUrl = function (url) {
-    return new Promise(function (resolve) {
-      var img = new Image();
-      img.src = url;
-
-      img.onload = function () {
-        resolve(img);
-      };
-
-      img.src = url;
-    });
-  };
-
-  return ImageUtils;
-}();
-
-exports.default = ImageUtils;
 },{}],"src/GameMap.ts":[function(require,module,exports) {
 "use strict";
 
@@ -697,8 +1030,6 @@ var __extends = this && this.__extends || function () {
   };
 
   return function (d, b) {
-    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-
     _extendStatics(d, b);
 
     function __() {
@@ -708,149 +1039,6 @@ var __extends = this && this.__extends || function () {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
   };
 }();
-
-var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
-  function adopt(value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value);
-    });
-  }
-
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled(value) {
-      try {
-        step(generator.next(value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-
-    function rejected(value) {
-      try {
-        step(generator["throw"](value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-
-    function step(result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-    }
-
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-  });
-};
-
-var __generator = this && this.__generator || function (thisArg, body) {
-  var _ = {
-    label: 0,
-    sent: function sent() {
-      if (t[0] & 1) throw t[1];
-      return t[1];
-    },
-    trys: [],
-    ops: []
-  },
-      f,
-      y,
-      t,
-      g;
-  return g = {
-    next: verb(0),
-    "throw": verb(1),
-    "return": verb(2)
-  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
-    return this;
-  }), g;
-
-  function verb(n) {
-    return function (v) {
-      return step([n, v]);
-    };
-  }
-
-  function step(op) {
-    if (f) throw new TypeError("Generator is already executing.");
-
-    while (_) {
-      try {
-        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-        if (y = 0, t) op = [op[0] & 2, t.value];
-
-        switch (op[0]) {
-          case 0:
-          case 1:
-            t = op;
-            break;
-
-          case 4:
-            _.label++;
-            return {
-              value: op[1],
-              done: false
-            };
-
-          case 5:
-            _.label++;
-            y = op[1];
-            op = [0];
-            continue;
-
-          case 7:
-            op = _.ops.pop();
-
-            _.trys.pop();
-
-            continue;
-
-          default:
-            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
-              _ = 0;
-              continue;
-            }
-
-            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
-              _.label = op[1];
-              break;
-            }
-
-            if (op[0] === 6 && _.label < t[1]) {
-              _.label = t[1];
-              t = op;
-              break;
-            }
-
-            if (t && _.label < t[2]) {
-              _.label = t[2];
-
-              _.ops.push(op);
-
-              break;
-            }
-
-            if (t[2]) _.ops.pop();
-
-            _.trys.pop();
-
-            continue;
-        }
-
-        op = body.call(thisArg, _);
-      } catch (e) {
-        op = [6, e];
-        y = 0;
-      } finally {
-        f = t = 0;
-      }
-    }
-
-    if (op[0] & 5) throw op[1];
-    return {
-      value: op[0] ? op[1] : void 0,
-      done: true
-    };
-  }
-};
 
 var __importDefault = this && this.__importDefault || function (mod) {
   return mod && mod.__esModule ? mod : {
@@ -864,8 +1052,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var Entity_1 = __importDefault(require("./engine/Entity"));
 
-var ImageUtils_1 = __importDefault(require("./engine/ImageUtils"));
-
 var GameMap =
 /** @class */
 function (_super) {
@@ -875,35 +1061,17 @@ function (_super) {
     return _super.call(this) || this;
   }
 
-  GameMap.prototype.setup = function (gameData) {
-    return __awaiter(this, void 0, void 0, function () {
-      var _a;
-
-      return __generator(this, function (_b) {
-        switch (_b.label) {
-          case 0:
-            _a = this;
-            return [4
-            /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/bg.png")];
-
-          case 1:
-            _a.tileImage = _b.sent();
-            this.width = gameData.screenWidth;
-            this.height = gameData.screenHeight;
-            return [2
-            /*return*/
-            ];
-        }
-      });
-    });
+  GameMap.prototype.setup = function (imageCache) {
+    this.tileImage = imageCache.getPreloaded("bg");
   };
 
   GameMap.prototype.render = function (_a) {
-    var context = _a.context;
+    var context = _a.context,
+        screenHeight = _a.screenHeight,
+        screenWidth = _a.screenWidth;
     var tileSize = 64;
-    var tileCountX = Math.ceil(this.width / tileSize);
-    var tileCountY = Math.ceil(this.height / tileSize);
+    var tileCountX = Math.ceil(screenWidth / tileSize);
+    var tileCountY = Math.ceil(screenHeight / tileSize);
 
     for (var y = 0; y < tileCountY; y++) {
       for (var x = 0; x < tileCountX; x++) {
@@ -916,7 +1084,7 @@ function (_super) {
 }(Entity_1.default);
 
 exports.default = GameMap;
-},{"./engine/Entity":"src/engine/Entity.ts","./engine/ImageUtils":"src/engine/ImageUtils.ts"}],"src/engine/SpriteSheet.ts":[function(require,module,exports) {
+},{"./engine/Entity":"src/engine/Entity.ts"}],"src/engine/SpriteSheet.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -934,11 +1102,8 @@ function () {
 
   SpriteSheet.prototype.render = function (_a, xCount, yCount, x, y, width, height, _b) {
     var context = _a.context;
-
-    var _c = _b === void 0 ? {} : _b,
-        _d = _c.flippedX,
-        flippedX = _d === void 0 ? false : _d;
-
+    var _c = (_b === void 0 ? {} : _b).flippedX,
+        flippedX = _c === void 0 ? false : _c;
     var renderedX = x;
 
     if (flippedX) {
@@ -995,8 +1160,6 @@ var __extends = this && this.__extends || function () {
   };
 
   return function (d, b) {
-    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-
     _extendStatics(d, b);
 
     function __() {
@@ -1025,9 +1188,8 @@ function (_super) {
   __extends(SpriteSheetSprite, _super);
 
   function SpriteSheetSprite(spriteSheet, xCount, yCount, _a) {
-    var _b = _a === void 0 ? {} : _a,
-        _c = _b.flippedX,
-        flippedX = _c === void 0 ? false : _c;
+    var _b = (_a === void 0 ? {} : _a).flippedX,
+        flippedX = _b === void 0 ? false : _b;
 
     var _this = _super.call(this) || this;
 
@@ -1067,8 +1229,6 @@ var __extends = this && this.__extends || function () {
   };
 
   return function (d, b) {
-    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-
     _extendStatics(d, b);
 
     function __() {
@@ -1097,9 +1257,8 @@ function (_super) {
   __extends(Animation, _super);
 
   function Animation(spriteSheet, frames, msPerFrame, _a) {
-    var _b = _a === void 0 ? {} : _a,
-        _c = _b.flippedX,
-        flippedX = _c === void 0 ? false : _c;
+    var _b = (_a === void 0 ? {} : _a).flippedX,
+        flippedX = _b === void 0 ? false : _b;
 
     var _this = _super.call(this) || this;
 
@@ -1113,7 +1272,6 @@ function (_super) {
   }
 
   Animation.prototype.update = function (gameData, delta) {
-    //Update the frame
     this.msInCurrentFrame += delta * 1000;
 
     if (this.msInCurrentFrame >= this.msPerFrame) {
@@ -1127,7 +1285,6 @@ function (_super) {
   };
 
   Animation.prototype.render = function (gameData, x, y, width, height) {
-    //Render the frame
     var currentFrame = this.frames[this.currentFrameIndex];
     this.spriteSheet.render(gameData, currentFrame[0], currentFrame[1], x, y, width, height, {
       flippedX: this.flippedX
@@ -1160,7 +1317,7 @@ function () {
 }();
 
 exports.default = Range;
-},{}],"src/Player.ts":[function(require,module,exports) {
+},{}],"src/Bomb.ts":[function(require,module,exports) {
 "use strict";
 
 var __extends = this && this.__extends || function () {
@@ -1179,8 +1336,6 @@ var __extends = this && this.__extends || function () {
   };
 
   return function (d, b) {
-    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-
     _extendStatics(d, b);
 
     function __() {
@@ -1191,148 +1346,74 @@ var __extends = this && this.__extends || function () {
   };
 }();
 
-var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
-  function adopt(value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value);
-    });
-  }
-
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled(value) {
-      try {
-        step(generator.next(value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-
-    function rejected(value) {
-      try {
-        step(generator["throw"](value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-
-    function step(result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-    }
-
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-  });
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
 };
 
-var __generator = this && this.__generator || function (thisArg, body) {
-  var _ = {
-    label: 0,
-    sent: function sent() {
-      if (t[0] & 1) throw t[1];
-      return t[1];
-    },
-    trys: [],
-    ops: []
-  },
-      f,
-      y,
-      t,
-      g;
-  return g = {
-    next: verb(0),
-    "throw": verb(1),
-    "return": verb(2)
-  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
-    return this;
-  }), g;
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Bomb = void 0;
 
-  function verb(n) {
-    return function (v) {
-      return step([n, v]);
-    };
+var Entity_1 = __importDefault(require("./engine/Entity"));
+
+var SpriteSheet_1 = __importDefault(require("./engine/SpriteSheet"));
+
+var SpriteSheetSprite_1 = __importDefault(require("./engine/SpriteSheetSprite"));
+
+var Bomb =
+/** @class */
+function (_super) {
+  __extends(Bomb, _super);
+
+  function Bomb() {
+    return _super !== null && _super.apply(this, arguments) || this;
   }
 
-  function step(op) {
-    if (f) throw new TypeError("Generator is already executing.");
+  Bomb.prototype.setup = function (imageCache) {
+    var sheetImage = imageCache.getPreloaded("bomb");
+    var sheet = new SpriteSheet_1.default(sheetImage, 48, 48);
+    this.sprite = new SpriteSheetSprite_1.default(sheet, 0, 0);
+  };
 
-    while (_) {
-      try {
-        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-        if (y = 0, t) op = [op[0] & 2, t.value];
+  Bomb.prototype.render = function (gameData) {
+    this.sprite.render(gameData, 100, 100, 48, 48);
+  };
 
-        switch (op[0]) {
-          case 0:
-          case 1:
-            t = op;
-            break;
+  return Bomb;
+}(Entity_1.default);
 
-          case 4:
-            _.label++;
-            return {
-              value: op[1],
-              done: false
-            };
+exports.Bomb = Bomb;
+},{"./engine/Entity":"src/engine/Entity.ts","./engine/SpriteSheet":"src/engine/SpriteSheet.ts","./engine/SpriteSheetSprite":"src/engine/SpriteSheetSprite.ts"}],"src/Player.ts":[function(require,module,exports) {
+"use strict";
 
-          case 5:
-            _.label++;
-            y = op[1];
-            op = [0];
-            continue;
-
-          case 7:
-            op = _.ops.pop();
-
-            _.trys.pop();
-
-            continue;
-
-          default:
-            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
-              _ = 0;
-              continue;
-            }
-
-            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
-              _.label = op[1];
-              break;
-            }
-
-            if (op[0] === 6 && _.label < t[1]) {
-              _.label = t[1];
-              t = op;
-              break;
-            }
-
-            if (t && _.label < t[2]) {
-              _.label = t[2];
-
-              _.ops.push(op);
-
-              break;
-            }
-
-            if (t[2]) _.ops.pop();
-
-            _.trys.pop();
-
-            continue;
-        }
-
-        op = body.call(thisArg, _);
-      } catch (e) {
-        op = [6, e];
-        y = 0;
-      } finally {
-        f = t = 0;
+var __extends = this && this.__extends || function () {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
+      __proto__: []
+    } instanceof Array && function (d, b) {
+      d.__proto__ = b;
+    } || function (d, b) {
+      for (var p in b) {
+        if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p];
       }
+    };
+
+    return _extendStatics(d, b);
+  };
+
+  return function (d, b) {
+    _extendStatics(d, b);
+
+    function __() {
+      this.constructor = d;
     }
 
-    if (op[0] & 5) throw op[1];
-    return {
-      value: op[0] ? op[1] : void 0,
-      done: true
-    };
-  }
-};
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+  };
+}();
 
 var __importDefault = this && this.__importDefault || function (mod) {
   return mod && mod.__esModule ? mod : {
@@ -1344,8 +1425,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var ImageUtils_1 = __importDefault(require("./engine/ImageUtils"));
-
 var SpriteSheet_1 = __importDefault(require("./engine/SpriteSheet"));
 
 var SpriteSheetSprite_1 = __importDefault(require("./engine/SpriteSheetSprite"));
@@ -1355,6 +1434,8 @@ var Animation_1 = __importDefault(require("./engine/Animation"));
 var Range_1 = __importDefault(require("./engine/Range"));
 
 var Entity_1 = __importDefault(require("./engine/Entity"));
+
+var Bomb_1 = require("./Bomb");
 
 var Player =
 /** @class */
@@ -1373,61 +1454,20 @@ function (_super) {
     return _this;
   }
 
-  Player.prototype.setup = function (gameData) {
-    return __awaiter(this, void 0, void 0, function () {
-      var spriteSheetImage, spriteSheet, imagePromises, _a, _b, imageF, imageB, imageR;
-
-      return __generator(this, function (_c) {
-        switch (_c.label) {
-          case 0:
-            return [4
-            /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_spritesheet.png")];
-
-          case 1:
-            spriteSheetImage = _c.sent();
-            spriteSheet = new SpriteSheet_1.default(spriteSheetImage, 64, 128);
-            return [4
-            /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_f00.png")];
-
-          case 2:
-            _a = [_c.sent()];
-            return [4
-            /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_b00.png")];
-
-          case 3:
-            _a = _a.concat([_c.sent()]);
-            return [4
-            /*yield*/
-            , ImageUtils_1.default.loadImageFromUrl("http://localhost:4000/static/player_r00.png")];
-
-          case 4:
-            imagePromises = _a.concat([_c.sent()]);
-            return [4
-            /*yield*/
-            , Promise.all(imagePromises)];
-
-          case 5:
-            _b = _c.sent(), imageF = _b[0], imageB = _b[1], imageR = _b[2];
-            this.sprites = {
-              idle: new SpriteSheetSprite_1.default(spriteSheet, 0, 0),
-              forward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(0, 8), 100),
-              backward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(1, 8), 100),
-              right: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100),
-              left: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100, {
-                flippedX: true
-              })
-            };
-            this.width = 64;
-            this.height = 128;
-            return [2
-            /*return*/
-            ];
-        }
-      });
-    });
+  Player.prototype.setup = function (imageCache) {
+    var spriteSheetImage = imageCache.getPreloaded("player");
+    var spriteSheet = new SpriteSheet_1.default(spriteSheetImage, 64, 128);
+    this.sprites = {
+      idle: new SpriteSheetSprite_1.default(spriteSheet, 0, 0),
+      forward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(0, 8), 100),
+      backward: new Animation_1.default(spriteSheet, Range_1.default.rowRange(1, 8), 100),
+      right: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100),
+      left: new Animation_1.default(spriteSheet, Range_1.default.rowRange(2, 8), 100, {
+        flippedX: true
+      })
+    };
+    this.width = 64;
+    this.height = 128;
   };
 
   Player.prototype.update = function (gameData, delta) {
@@ -1447,6 +1487,12 @@ function (_super) {
       this.velY = -(this.speed * delta);
     }
 
+    if (keyListener.isKeyDown(" ")) {
+      var bomb = new Bomb_1.Bomb();
+      gameData.entityManager.addEntity(bomb);
+    }
+
+    this.calculateCollision(gameData);
     this.xPos += this.velX;
     this.yPos += this.velY;
     this.getMovingSprite().update(gameData, delta);
@@ -1454,6 +1500,29 @@ function (_super) {
 
   Player.prototype.render = function (gameData) {
     this.getMovingSprite().render(gameData, this.xPos, this.yPos, this.width, this.height);
+  };
+
+  Player.prototype.calculateCollision = function (_a) {
+    var collisionHandler = _a.collisionHandler;
+    var collisionBox = {
+      xPos: this.xPos + 10,
+      yPos: this.yPos + 110,
+      width: this.width - 20,
+      height: this.height - 115
+    };
+    var collisionsX = collisionHandler.testMovement(collisionBox, this.velX, 0);
+
+    if (collisionsX.length > 0) {
+      // TODO: move the distance you're still allowed
+      this.velX = 0;
+    }
+
+    var collisionsY = collisionHandler.testMovement(collisionBox, 0, this.velY);
+
+    if (collisionsY.length > 0) {
+      // TODO: move the distance you're still allowed
+      this.velY = 0;
+    }
   };
 
   Player.prototype.getMovingSprite = function () {
@@ -1468,7 +1537,7 @@ function (_super) {
 }(Entity_1.default);
 
 exports.default = Player;
-},{"./engine/ImageUtils":"src/engine/ImageUtils.ts","./engine/SpriteSheet":"src/engine/SpriteSheet.ts","./engine/SpriteSheetSprite":"src/engine/SpriteSheetSprite.ts","./engine/Animation":"src/engine/Animation.ts","./engine/Range":"src/engine/Range.ts","./engine/Entity":"src/engine/Entity.ts"}],"src/BombermanGame.ts":[function(require,module,exports) {
+},{"./engine/SpriteSheet":"src/engine/SpriteSheet.ts","./engine/SpriteSheetSprite":"src/engine/SpriteSheetSprite.ts","./engine/Animation":"src/engine/Animation.ts","./engine/Range":"src/engine/Range.ts","./engine/Entity":"src/engine/Entity.ts","./Bomb":"src/Bomb.ts"}],"src/TestBrick.ts":[function(require,module,exports) {
 "use strict";
 
 var __extends = this && this.__extends || function () {
@@ -1487,8 +1556,80 @@ var __extends = this && this.__extends || function () {
   };
 
   return function (d, b) {
-    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+    _extendStatics(d, b);
 
+    function __() {
+      this.constructor = d;
+    }
+
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+  };
+}();
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Entity_1 = __importDefault(require("./engine/Entity"));
+
+var SpriteSheet_1 = __importDefault(require("./engine/SpriteSheet"));
+
+var TestBrick =
+/** @class */
+function (_super) {
+  __extends(TestBrick, _super);
+
+  function TestBrick() {
+    return _super !== null && _super.apply(this, arguments) || this;
+  }
+
+  TestBrick.prototype.setup = function (imageCache) {
+    var img = imageCache.getPreloaded("blocks");
+    this.sheet = new SpriteSheet_1.default(img, 64, 64);
+  };
+
+  TestBrick.prototype.render = function (gameData) {
+    this.sheet.render(gameData, 1, 0, 128, 128, 64, 64);
+  };
+
+  TestBrick.prototype.getCollisionBox = function () {
+    return {
+      xPos: 128,
+      yPos: 128,
+      width: 64,
+      height: 64
+    };
+  };
+
+  return TestBrick;
+}(Entity_1.default);
+
+exports.default = TestBrick;
+},{"./engine/Entity":"src/engine/Entity.ts","./engine/SpriteSheet":"src/engine/SpriteSheet.ts"}],"src/BombermanGame.ts":[function(require,module,exports) {
+"use strict";
+
+var __extends = this && this.__extends || function () {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
+      __proto__: []
+    } instanceof Array && function (d, b) {
+      d.__proto__ = b;
+    } || function (d, b) {
+      for (var p in b) {
+        if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p];
+      }
+    };
+
+    return _extendStatics(d, b);
+  };
+
+  return function (d, b) {
     _extendStatics(d, b);
 
     function __() {
@@ -1658,6 +1799,8 @@ var GameMap_1 = __importDefault(require("./GameMap"));
 
 var Player_1 = __importDefault(require("./Player"));
 
+var TestBrick_1 = __importDefault(require("./TestBrick"));
+
 var BombermanGame =
 /** @class */
 function (_super) {
@@ -1667,10 +1810,36 @@ function (_super) {
     return _super !== null && _super.apply(this, arguments) || this;
   }
 
+  BombermanGame.prototype.preload = function (imageCache) {
+    return __awaiter(this, void 0, Promise, function () {
+      return __generator(this, function (_a) {
+        switch (_a.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , imageCache.preloadImages({
+              blocks: "http://localhost:4000/static/blocks.png",
+              player: "http://localhost:4000/static/player_spritesheet.png",
+              bg: "http://localhost:4000/static/bg.png",
+              bomb: "http://localhost:4000/static/bomb.png"
+            })];
+
+          case 1:
+            _a.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  };
+
   BombermanGame.prototype.setup = function (gameData) {
     return __awaiter(this, void 0, void 0, function () {
       return __generator(this, function (_a) {
         this.addEntity(new GameMap_1.default());
+        this.addEntity(new TestBrick_1.default());
         this.addEntity(new Player_1.default());
         return [2
         /*return*/
@@ -1683,7 +1852,7 @@ function (_super) {
 }(Game_1.default);
 
 exports.default = BombermanGame;
-},{"./engine/Game":"src/engine/Game.ts","./GameMap":"src/GameMap.ts","./Player":"src/Player.ts"}],"src/bootstrap.ts":[function(require,module,exports) {
+},{"./engine/Game":"src/engine/Game.ts","./GameMap":"src/GameMap.ts","./Player":"src/Player.ts","./TestBrick":"src/TestBrick.ts"}],"src/bootstrap.ts":[function(require,module,exports) {
 "use strict";
 
 var __awaiter = this && this.__awaiter || function (thisArg, _arguments, P, generator) {
@@ -1843,18 +2012,17 @@ var BombermanGame_1 = __importDefault(require("./BombermanGame"));
 
 function bootstrap() {
   return __awaiter(this, void 0, void 0, function () {
-    var canvasEl, context, game;
+    var canvasEl, game;
     return __generator(this, function (_a) {
       canvasEl = document.getElementById("game-canvas");
 
       if (canvasEl == null) {
-        console.log("Couldn't find the canvas elment");
+        console.log("Couldn't find the canvas element");
         return [2
         /*return*/
         ];
       }
 
-      context = canvasEl.getContext("2d");
       canvasEl.focus();
       game = new BombermanGame_1.default(canvasEl);
       game.run();
@@ -1894,7 +2062,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55007" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60905" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
