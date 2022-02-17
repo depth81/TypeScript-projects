@@ -1,4 +1,4 @@
-import Game from "./Game"
+import BombermanGame from './BombermanGame'
 
 async function bootstrap(){
     const canvasEl = document.getElementById("game-canvas") as HTMLCanvasElement | undefined
@@ -11,7 +11,7 @@ async function bootstrap(){
 
     canvasEl.focus()
 
-    const game = new Game(canvasEl)
+    const game = new BombermanGame(canvasEl)
     game.run()
 
 }

@@ -7,15 +7,3 @@ export interface GameData{
     keyListener: KeyListener
 }
 
-export interface Sprite{
-
-    render(
-        gameData: GameData,
-        delta: number,
-        x:number, 
-        y:number, 
-        width:number, 
-        height:number)
-        : void
-
-}

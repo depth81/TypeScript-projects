@@ -1,9 +1,10 @@
 import SpriteSheet from "./SpriteSheet"
-import { GameData, Sprite } from "./Types"
+import { GameData } from "./Types"
+import Sprite from "./Sprite"
 
 type Frame = [number, number]
 
-class Animation implements Sprite{
+class Animation extends Sprite{
     
     private spriteSheet: SpriteSheet
     private frames: Frame[]
@@ -19,21 +20,15 @@ class Animation implements Sprite{
         {flippedX = false}: {flippedX?: boolean} = {}
         )
     {
+        super()
         this.spriteSheet = spriteSheet
         this.frames = frames
         this.msPerFrame = msPerFrame
         this.flippedX = flippedX
     }
 
-    public render(
-        gameData: GameData,
-        delta: number,
-        x: number,
-        y: number,
-        width: number,
-        heigth: number,
-        {flippedX = false}: {flippedX?: boolean} = {}
-    ){
+    public update(gameData: GameData, delta:number)
+    {
         //Update the frame
         this.msInCurrentFrame += delta * 1000
         if(this.msInCurrentFrame >= this.msPerFrame){
@@ -44,6 +39,17 @@ class Animation implements Sprite{
             }
         }
         
+    }
+
+
+    public render(
+        gameData: GameData,
+        x: number,
+        y: number,
+        width: number,
+        height: number
+    ){
+        
         //Render the frame
         const currentFrame = this.frames[this.currentFrameIndex]
         this.spriteSheet.render(
@@ -53,7 +59,7 @@ class Animation implements Sprite{
             x,
             y,
             width,
-            heigth,
+            height,
             {flippedX: this.flippedX}
         )
 

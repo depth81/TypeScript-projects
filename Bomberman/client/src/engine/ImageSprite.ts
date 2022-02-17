@@ -1,18 +1,19 @@
-import { GameData, Sprite } from "./Types"
+import { GameData } from "./Types"
+import Sprite from "./Sprite"
 
-class ImageSprite implements Sprite{
+class ImageSprite extends Sprite{
     
     private image: HTMLImageElement
     private flippedX: boolean
 
     constructor(image: HTMLImageElement, {flippedX=false}:{flippedX?:boolean}={}){
+        super()
         this.image = image
         this.flippedX = flippedX
     }
 
     public render(
         {context}: GameData, 
-        delta: number,
         x:number, 
         y:number, 
         width:number, 
